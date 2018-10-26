@@ -1,12 +1,9 @@
 package com.ichanskiy.profiling.handlers;
 
 import com.ichanskiy.profiling.annotation.Profiling;
-import com.ichanskiy.profiling.controller.ProfilingHandlerController;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Configuration;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -14,11 +11,10 @@ import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 
-@Service
+@Configuration
 public class ProfilingHandlerBeanPostProcessor implements BeanPostProcessor {
 
     private Map<String, Class> beanNamesWithProfiling = new HashMap<>();
-    private ProfilingHandlerController controller = new ProfilingHandlerController();
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -26,7 +22,7 @@ public class ProfilingHandlerBeanPostProcessor implements BeanPostProcessor {
         if (beanClass.isAnnotationPresent(Profiling.class)) {
             beanNamesWithProfiling.put(beanName, beanClass);
         }
-        return null;
+        return bean;
     }
 
     @Override
@@ -36,19 +32,16 @@ public class ProfilingHandlerBeanPostProcessor implements BeanPostProcessor {
             return Proxy.newProxyInstance(beanClass.getClassLoader(), beanClass.getInterfaces(), new InvocationHandler() {
                 @Override
                 public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                    if (controller.isProfiling) {
-                        System.out.println("Profiling...");
-                        long before = System.nanoTime();
-                        Object returnValue = method.invoke(bean, args);
-                        long after = System.nanoTime();
-                        System.out.println(after - before);
-                        System.out.println("End Profiling!");
-                        return returnValue;
-                    }
-                    return method.invoke(bean, args);
+                    System.out.println("Profiling " + method.getClass().getPackage().toString());
+                    long before = System.nanoTime();
+                    Object returnValue = method.invoke(bean, args);
+                    long after = System.nanoTime();
+                    System.out.println("Full time = " + (after - before));
+                    System.out.println("End Profiling!");
+                    return returnValue;
                 }
             });
         }
-        return null;
+        return bean;
     }
 }
